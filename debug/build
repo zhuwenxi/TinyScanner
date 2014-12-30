@@ -1,0 +1,4 @@
+/FeTinyScanner.exe
+../src/main.c
+../src/scan.c
+../src/utils.c
