@@ -1,30 +1,28 @@
 #include <stdio.h>
 #include "headers/globals.h"
 #include "headers/scan.h"
+#include <malloc.h>
 
 int main ()
 {
-	const char *sampleSrc = "C:\\Users\\wenxizhu\\Desktop\\workspace\\Projects\\TinyScanner\\samples\\sample.tny";
+	const char *sampleSrc = "C:\\Users\\wenxizhu\\Desktop\\workspace\\TinyScanner\\samples\\sample.tny";
 	bool success = openFile(sampleSrc);
 
 	if (success) {
 		TokenType t = getToken();
 		while (t != ENDFILE)
 		{
-			printf("%s\n", tokenString);
-			// printf("%d\n", t);
+			// printf("    %d: %s\n", getLineNumber(), tokenString);
+			printToken(t);
 			t = getToken();
 		}
 
-		// int i;
-		// for (i = 0 ; i < 100 ; i ++)
-		// {
-		// 	TokenType t = getToken();
-		// 	printf("%s\n", tokenString);
-		// 	printf("%d\n", t);
-		// }
+		printToken(t);
+
 	} else {
 		printf("Oops!!");
 	}
+
+	// Do some test here.
 	system("PAUSE");
-}
+}	

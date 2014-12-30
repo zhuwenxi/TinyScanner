@@ -3,6 +3,7 @@
 #include "headers/scan.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <malloc.h>
 
 FILE *fp = NULL;
 
@@ -17,11 +18,31 @@ typedef enum
 	ERROR,
 } State;
 
+// reserved words list:
+const char rw[][10] = {"if", "then", "else", "end", "repeat", "until", "read", "write"};
+
 char tokenString[MAXTOKENLENGTH + 1] = "";
+
+int lineNumber = 0;
+
+int flag = 0;
+
+char *line = NULL;
+
+bool outputByLine = true;
+
+bool endOfFile = false;
+
 // function declaration:
 char getNextChar (void);
 
 void ungetNextChar (void);
+
+char getNextCharByLine();
+
+void ungetNextCharByLine();
+
+char* getNextLine();
 
 void handleINCOMMENT (char, State *, TokenType *);
 
@@ -42,6 +63,8 @@ bool isDigit (char);
 bool isLetter (char);
 
 bool isWhitespace (char);
+
+bool isReservedWord (char *);
 
 TokenType getToken ()
 {
@@ -102,18 +125,108 @@ bool openFile (const char *fileSrc)
 	}
 }
 
-char getNextChar () 
+void closeFile ()
 {
-	return (char)(fgetc(fp));
-}
-
-void ungetNextChar () {
-	if (!feof(fp)) {
-		fseek(fp, -1L, 1);
+	if (fp != NULL) {
+		fclose(fp);
 	}
 }
 
-int counter = 0;
+char getNextChar () 
+{	
+	if (outputByLine) 
+	{
+		return getNextCharByLine();
+	}
+	else 
+	{
+		return (char)(fgetc(fp));
+	}
+	
+}
+
+void ungetNextChar () {
+	if (outputByLine)
+	{
+		ungetNextCharByLine();
+	}
+	else 
+	{
+		if (!feof(fp)) {
+			fseek(fp, -1L, 1);
+		}
+	}
+}
+
+char getNextCharByLine() 
+{	
+	if (line == NULL)
+	{
+		line = getNextLine();
+		lineNumber++;
+		printf("%d:  %s", lineNumber, line);
+	}
+	
+	if (line[flag] == '\0')
+	{
+		if (feof(fp))
+		{	
+			// printf("==============================\n");
+			// printf("line:%s\n", line);
+			// printf("return EOF.\n");
+			// printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+			endOfFile = true;
+			return EOF;
+		}
+		else 
+		{	
+			flag = 0;
+			line = getNextLine();
+			lineNumber ++;
+
+			// if (lineNumber == 14)
+			// {
+			// 	printf("first letter of line 14:%d\n", line[0]);
+			// }
+
+			
+			printf("%d:  %s", lineNumber, line);
+
+			if (feof(fp)){
+				printf("\n");
+			}
+			// printf("call self here.\n");
+			return getNextCharByLine();
+		}
+	} 
+	else 
+	{	
+		// printf("return:%c\n", line[flag]);
+		return line[flag++];
+	}
+}
+
+void ungetNextCharByLine() 
+{
+	if (endOfFile == false)
+	{
+		flag--;
+	}
+}
+
+char *getNextLine ()
+{	
+	char *line = (char *)malloc(1024 * sizeof(char));
+
+	fgets(line, 1024 * sizeof(char), fp);
+	
+ 	if (feof(fp))
+ 	{
+ 		// line[0] = '\0';
+ 	}
+ 	
+	return line;
+}
 
 void handleSTART (char ch, State *sp, TokenType *tp) 
 {	
@@ -134,7 +247,6 @@ void handleSTART (char ch, State *sp, TokenType *tp)
 		*sp = INASSIGN;
 		updateTokenString(ch);
 	} else {
-
 		// Handle special symbols.
 		switch (ch) {
 			case '+':
@@ -172,7 +284,14 @@ void handleSTART (char ch, State *sp, TokenType *tp)
 				break;
 		}
 		*sp = DONE;
+
 		updateTokenString(ch);
+
+		if (*tp == ENDFILE)
+		{
+			resetTokenString();
+			strcpy(tokenString, "EOF");
+		}
 	}
 
 	
@@ -203,7 +322,14 @@ void handleINID (char ch, State *sp, TokenType *tp)
 		updateTokenString(ch);
 	} else {
 		*sp = DONE;
-		*tp = ID;
+	
+		if (!isReservedWord(tokenString)) {
+			*tp = ID;
+		} else {
+			// Hack here, should be reserved word
+			*tp = IF;
+		}
+		
 		ungetNextChar();
 	}
 }
@@ -256,6 +382,78 @@ bool isWhitespace (char ch)
 {
 	// return true if ch "newline", "space", "horizontal tab" or "vertical tab".
 	return ch == 10 || ch == 32 || ch == 0 || ch == 11;
+}
+
+int getLineNumber ()
+{
+	return lineNumber;
+}
+
+void printToken(TokenType token)
+{
+	switch (token)
+	{
+		case ID:
+			printf("    %d:  ID, name=%s\n", lineNumber, tokenString);
+			break;
+		case NUM:
+			printf("    %d:  NUM, val=%s\n", lineNumber, tokenString);
+			break;
+		case PLUS:
+		case MINUS:				// 9
+		case MUTI:				// 10
+		case DIVIDE:			// 11
+		case SLASH:				// 12
+		case EQUAL:				// 13
+		case LESSTHAN:			// 14
+		case LEFTBRACKET:		// 15
+		case RIGHTBRACKET:		// 16
+		case SEMICOLON:			// 17
+		case ASSIGN:			// 18
+			printf("    %d:  %s\n", lineNumber, tokenString);
+			break;
+		case ENDFILE:
+			printf("    %d:  %s\n", lineNumber, tokenString);
+			break;
+		case IF:
+			printf("    %d:  reserved word: %s\n", lineNumber, tokenString);
+			break;
+		default:
+			printf("Oops!!");
+			printf("token type:%d\n", token);
+			break;
+	}
+}
+
+bool isReservedWord (char* token)
+{	
+	int i;
+
+	for (i = 0 ; i < 8 ; i++)
+	{
+		const char *reservedWord = rw[i];
+		if (strcmp(reservedWord, token) == 0)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// Test
+void printLines() {
+	while (true) {
+		char *str;
+		// str = getNextLine();
+		str = (char *)malloc(1024);
+		fgets(str, 1024, fp);
+		if (feof(fp))
+		{
+			break;
+		}
+		printf("%s", str);
+	}
 }
 
 
