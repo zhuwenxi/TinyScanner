@@ -2,7 +2,9 @@
 #define __UTILS_H__
 
 #include <stdio.h>
-#include <stdbool.h>
+#define bool int
+#define false 0
+#define true 1
 
 extern bool isDebug;
 void log (char *, char *);

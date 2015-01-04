@@ -1,7 +1,6 @@
 #include "headers/globals.h"
 #include "headers/utils.h"
 #include "headers/scan.h"
-#include <stdbool.h>
 #include <stdio.h>
 #include <malloc.h>
 
@@ -68,11 +67,13 @@ bool isReservedWord (char *);
 
 TokenType getToken ()
 {
-	resetTokenString();
+	
 
 	State state = START;
 	char ch = '\0';
 	TokenType type = UNKNOWN;
+
+	resetTokenString();
 
 	while (state != DONE && state != ERROR) {
 
@@ -218,14 +219,13 @@ char *getNextLine ()
 {	
 	char *line = (char *)malloc(1024 * sizeof(char));
 
-	fgets(line, 1024 * sizeof(char), fp);
-	
- 	if (feof(fp))
- 	{
- 		// line[0] = '\0';
- 	}
- 	
-	return line;
+	if (fgets(line, 1024 * sizeof(char), fp)) 
+	{
+		return line;
+	} else {
+		line[0] = '\0';
+		return line;
+	}
 }
 
 void handleSTART (char ch, State *sp, TokenType *tp) 

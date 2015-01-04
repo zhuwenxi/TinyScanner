@@ -2,7 +2,7 @@
 #define __SCAN_H_
 
 #include "globals.h"
-#include <stdbool.h>
+#include "utils.h"
 
 #define MAXTOKENLENGTH 40
 
